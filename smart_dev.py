@@ -30,7 +30,7 @@ from collections import defaultdict
 import APIs.common_APIs as common_APIs
 from APIs.common_APIs import (my_system, my_system_full_output,
                               my_system_no_check, protocol_data_printB)
-from basic.async_task import AsyncBase
+#from basic.async_task import AsyncBase
 from basic.cprint import cprint
 from basic.log_tool import MyLogger
 from basic.task import Task
