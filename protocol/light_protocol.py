@@ -115,7 +115,7 @@ class SDK(asyncio.Protocol):
     def add_pkg_number(self):
         pkg_number = struct.unpack('>I', self.pkg_number)[0]
         pkg_number += 1
-        self.pkg_number = struct.pack('>I', self.pkg_number)
+        self.pkg_number = struct.pack('>I', pkg_number)
 
     def get_pkg_number(self, data):
         return truct.unpack('>I', data)[0]

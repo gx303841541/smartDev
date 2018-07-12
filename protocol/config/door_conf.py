@@ -43,11 +43,11 @@ Attribute_initialization = {
 
     "test_msgs": {
         "interval": 10,
-        "round": 1000,
+        "round": 10,
         "msgs": {
             #"COM_UPLOAD_DEV_STATUS": 30,
-            "COM_UPLOAD_RECORD.Data[0].RecordType.30001": 30,
-            "COM_UPLOAD_EVENT.Data[0].EventType.30301": 30,
+            "COM_UPLOAD_RECORD.Data[0].RecordType.30001": 5,
+            "COM_UPLOAD_EVENT.Data[0].EventType.30301": 5,
         }
     }
 }

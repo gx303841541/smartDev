@@ -68,9 +68,9 @@ class BaseSim(SDK):
             self.LOG.warn("\t\t\trsp: %d" % (self.msgst[msg_code]['rsp']))
             self.LOG.warn("-" * 30)
 
-    def to_to_send_msg(self, msg):
+    def to_to_send_msg(self, msg, ack=b'\x01'):
         self.update_msgst(json.loads(msg)['Command'], 'req')
-        return self.to_send_data(self.msg_build(msg))
+        return self.to_send_data(self.msg_build(msg, ack))
 
     def status_report_monitor(self):
         need_send_report = False
@@ -121,6 +121,7 @@ class Door(BaseSim):
 
             for i in range(self.test_msgs["msgs"][msg_name]):
                 self.msgs.append(msg)
+        self.msgs *= self.test_msgs["round"]
         random.shuffle(self.msgs)
 
     async def run_forever(self):
@@ -144,11 +145,14 @@ class Door(BaseSim):
             'heartbeat', self.to_send_heartbeat, 1000000, 6000)
 
     async def msg_dispatch(self):
-        msg = self.msgs[random.randint(0, len(self.msgs) - 1)]
-        if self.dev_register == False:
+        try:
+            msg = self.msgs.pop()
+            if self.dev_register == False:
+                pass
+            else:
+                self.to_to_send_msg(msg, ack=b'\x00')
+        except:
             pass
-        else:
-            self.to_to_send_msg(msg)
 
     def status_maintain(self):
         for item in self.SPECIAL_ITEM:
@@ -194,12 +198,12 @@ class Door(BaseSim):
         else:
             self.LOG.info(common_APIs.chinese_show("发送设备注册"))
             self.to_to_send_msg(json.dumps(
-                self.get_send_msg('COM_DEV_REGISTER')))
+                self.get_send_msg('COM_DEV_REGISTER')), ack=b'\x00')
 
     async def to_send_heartbeat(self):
         await asyncio.sleep(60)
         self.to_to_send_msg(json.dumps(
-            self.get_send_msg('COM_HEARTBEAT')))
+            self.get_send_msg('COM_HEARTBEAT')), ack=b'\x00')
 
     def get_upload_status(self):
         # self.LOG.info(common_APIs.chinese_show("设备状态上报"))
