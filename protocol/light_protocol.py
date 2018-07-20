@@ -25,13 +25,13 @@ from APIs.security import AES_CBC_decrypt, AES_CBC_encrypt
 
 
 class SDK(asyncio.Protocol):
-    def __init__(self, LOG, min_length=10):
+    def __init__(self, LOG, min_length=10, encrypt_flag=0):
         self.queue_in, self.queue_out = asyncio.Queue(), asyncio.Queue()
         self.min_length = min_length
         self.LOG = LOG
 
         self.left_data = b''
-
+        self.encrypt_flag = encrypt_flag
         self.name = 'Device controler'
         # status data:
         # 4bytes
@@ -56,7 +56,8 @@ class SDK(asyncio.Protocol):
     def msg_build(self, data, ack=b'\x01'):
         #self.LOG.info("send msg: " + self.convert_to_dictstr(data))
         # need encrypt
-        # data = AES_CBC_encrypt(self.sim_obj._encrypt_key, data)
+        if self.encrypt_flag:
+            data = AES_CBC_encrypt(self._encrypt_key, data)
         if isinstance(data, type(b'')):
             pass
         else:
@@ -85,7 +86,7 @@ class SDK(asyncio.Protocol):
         left_data = b''
 
         while data[0:1] != b'\x48' and len(data) >= self.min_length:
-            self.LOG.warn('give up dirty data: %02x' % ord(data[0]))
+            self.LOG.warn('give up dirty data: %02x' % ord(str(data[0])))
             data = data[1:]
 
         if len(data) < self.min_length:
@@ -101,11 +102,14 @@ class SDK(asyncio.Protocol):
                             data)
                         data_list += data_list_tmp
                         left_data += left_data_tmp
-                elif length >= 1 and length < 1000:
+                    else:
+                        #self.LOG.error('data field is empty!')
+                        pass
+                elif length >= 1 and length < 10000:
                     left_data = data
                 else:
                     for s in data[:4]:
-                        self.LOG.warn('give up dirty data: %02x' % ord(s))
+                        self.LOG.warn('give up dirty data: %02x' % ord(chr(s)))
                     left_data = data[4:]
             else:
                 pass
@@ -127,7 +131,6 @@ class SDK(asyncio.Protocol):
         return struct.pack('>I', len(msg))
 
     def protocol_handler(self, msg):
-        coding = sys.getfilesystemencoding()
         ack = False
         if msg[0:4] == b'\x48\x44\x58\x4d':
             if True or msg[4 + 20:4 + 20 + 20] == self.device_id or msg[4 + 20:4 + 20 + 20] == self.device_id.encode('utf-8'):
@@ -138,9 +141,11 @@ class SDK(asyncio.Protocol):
                 data_length = struct.unpack('>I', msg[49:53])[0]
                 crc16 = struct.unpack('>H', msg[55:57])
                 # need decrypt
-                # data = json.loads(AES_CBC_decrypt(self.sim_obj._decrypt_key,
-                #                                  msg[57:57 + data_length]).decode('utf-8'))
-                data = json.loads(msg[57:57 + data_length].decode('utf-8'))
+                if self.encrypt_flag:
+                    data = json.loads(AES_CBC_decrypt(self.sim_obj._encrypt_key,
+                                                      msg[57:57 + data_length]).decode('utf-8'))
+                else:
+                    data = json.loads(msg[57:57 + data_length].decode('utf-8'))
                 #self.LOG.info("recv msg: " + self.convert_to_dictstr(data))
                 rsp_msg = self.dev_protocol_handler(data, ack)
                 if rsp_msg:

@@ -20,8 +20,11 @@ from Crypto.Signature import PKCS1_v1_5 as Signature_pkcs1_v1_5
 
 
 def pad_msg(text):
-    pad_data = 16 - len(text)
-    return text + (chr(pad_data) * pad_data).encode('utf-8')
+    pad_data = 16 - len(text) % 16
+    if pad_data == 0:
+        pad_data = 16
+    #print('lem is: %d, pad len is: %d' % (len(text), pad_data))
+    return text.encode('utf-8') + (chr(pad_data) * pad_data).encode('utf-8')
 
 
 def unpad_msg(text):
@@ -33,13 +36,18 @@ def unpad_msg(text):
         print('except: %s' % e)
         return text
 
-    if len < 16 and text.endswith(struct.pack('B', len) * len):
+    if len <= 16 and text.endswith(struct.pack('B', len) * len):
         return text[0:-len]
     else:
         return text
 
 
 def AES_CBC_encrypt(key, plain_msg, usebase64=False):
+    print('encrypt key: %s' % key)
+    if isinstance(key, bytes):
+        pass
+    else:
+        key = key.encode('utf-8')
     cipher = AES.new(key, AES.MODE_ECB)
     msg = cipher.encrypt(pad_msg(plain_msg))
 
@@ -51,6 +59,11 @@ def AES_CBC_encrypt(key, plain_msg, usebase64=False):
 
 
 def AES_CBC_decrypt(key, ciphered_msg, usebase64=False):
+    print('decrypt key: %s' % key)
+    if isinstance(key, bytes):
+        pass
+    else:
+        key = key.encode('utf-8')
     if usebase64:
         to_decipher_str = ciphered_msg.decode('base64')
     else:

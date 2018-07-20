@@ -87,18 +87,19 @@ class BaseSim(SDK):
                 self.old_status[item] = copy.deepcopy(self.__dict__[item])
 
         if need_send_report:
-            self.send_msg(self.get_event_report())
+            self.send_msg(self.get_event_report(), ack=b'\x00')
 
 
 class Door(BaseSim):
-    def __init__(self, config_file, logger, N=0, tt=None):
-        super(Door, self).__init__(logger)
+    def __init__(self, config_file, logger, N=0, tt=None, encrypt_flag=0):
+        super(Door, self).__init__(logger, encrypt_flag=encrypt_flag)
         module_name = "protocol.config.%s" % config_file
         mod = import_module(module_name)
         self.sim_config = mod
         self.LOG = logger
         self.N = N
         self.tt = tt
+        self.encrypt_flag = encrypt_flag
         self.attribute_initialization()
         self.device_id = self._deviceID
         self.msgst = defaultdict(lambda: {})
@@ -190,7 +191,7 @@ class Door(BaseSim):
                 self.old_status[item] = copy.deepcopy(self.__dict__[item])
 
         if need_send_report:
-            self.send_msg(self.get_upload_status())
+            self.send_msg(self.get_upload_status(), ack=b'\x00')
 
     def to_register_dev(self):
         if self.dev_register:
@@ -229,7 +230,9 @@ class Door(BaseSim):
             if msg['Command'] == 'COM_DEV_REGISTER':
                 if msg['Result'] == 0:
                     self.dev_register = True
-                    #self.add_item('_decrypt_key', msg['Data'][0]['aeskey'])
+                    # decrypt
+                    if self.encrypt_flag:
+                        self.add_item('_encrypt_key', msg['Data'][0]['aeskey'])
                     self.LOG.warn(common_APIs.chinese_show("设备已经注册"))
                     return None
                 else:
@@ -241,7 +244,9 @@ class Door(BaseSim):
         else:
             self.update_msgst(msg['Command'], 'req')
 
-        if msg['Command'] in self.command_list:
+        if msg['Command'] == 'COM_HEARTBEAT':
+            pass
+        elif msg['Command'] in self.command_list:
             self.set_items(msg['Command'], msg)
             rsp_msg = self.get_rsp_msg(msg['Command'])
             self.update_msgst(msg['Command'], 'rsp')
@@ -277,6 +282,8 @@ class Door(BaseSim):
             msg_param_list = msg_param.split('.')
             tmp_msg = msg[msg_param_list[0]]
             for i in msg_param_list[1:]:
+                if re.match(r'\d+', i):
+                    i = int(i)
                 tmp_msg = tmp_msg[i]
             self.set_item(item, tmp_msg)
 
@@ -291,6 +298,7 @@ class Door(BaseSim):
         #"_subDeviceID": "301058FCDBDA53800001",
         self._deviceID = str(self.DeviceFacturer) + \
             str(self.DeviceType) + self._mac.replace(":", '')
-        self._encrypt_key = self._deviceID[-16:]
+        self._encrypt_key = self._deviceID[-16:].encode('utf-8')
+        #self._decrypt_key = self._deviceID[-16:].encode('utf-8')
         self._subDeviceID = str(self.subDeviceType) + \
             self._mac.replace(":", '') + "%04d" % (self.N + 1)

@@ -60,6 +60,14 @@ class ArgHandle():
             help='special device ids',
         )
         parser.add_argument(
+            '-e', '--encrypt',
+            dest='encrypt',
+            action='store',
+            default=0,
+            type=int,
+            help='encrypt',
+        )
+        parser.add_argument(
             '-p', '--server-port',
             dest='server_port',
             action='store',
@@ -214,7 +222,7 @@ if __name__ == '__main__':
             arg_handle.get_args('xx') + i), clevel=log_level, flevel=log_level, fenable=False)
 
         coro = loop.create_connection(lambda: Door(
-            config_file=arg_handle.get_args('config_file'), logger=dev_LOG, N=arg_handle.get_args('xx') + i, tt=arg_handle.get_args('tt')), arg_handle.get_args('server_IP'), arg_handle.get_args('server_port'))
+            config_file=arg_handle.get_args('config_file'), logger=dev_LOG, N=arg_handle.get_args('xx') + i, tt=arg_handle.get_args('tt'), encrypt_flag=arg_handle.get_args('encrypt')), arg_handle.get_args('server_IP'), arg_handle.get_args('server_port'))
         transport, protocol = loop.run_until_complete(coro)
         asyncio.ensure_future(protocol.run_forever())
         sims.append(protocol)
